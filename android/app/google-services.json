@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "785051614310",
+    "project_id": "sanhuu-app",
+    "storage_bucket": "sanhuu-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:785051614310:android:b0c1aa9fbbff0168f481a7",
+        "android_client_info": {
+          "package_name": "com.example.sanhuu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwSn69bXaQh0r5Sz8GCfn7Zh6dXXxed5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:785051614310:android:e7580583bdcda4cdf481a7",
+        "android_client_info": {
+          "package_name": "com.example.sanhuu_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwSn69bXaQh0r5Sz8GCfn7Zh6dXXxed5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
