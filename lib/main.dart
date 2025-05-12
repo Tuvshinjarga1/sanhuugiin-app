@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/home/profile_screen.dart';
+import 'screens/home/income_expense_screen.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -38,6 +40,10 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
         home: const AuthenticationWrapper(),
+        routes: {
+          '/profile': (context) => const ProfileScreen(),
+          '/income-expense': (context) => const IncomeExpenseScreen(),
+        },
       ),
     );
   }

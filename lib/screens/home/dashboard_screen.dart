@@ -293,15 +293,20 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ],
         ),
-        CircleAvatar(
-          backgroundColor: kPrimaryColor.withOpacity(0.1),
-          radius: 24,
-          child: Text(
-            (user?.displayName ?? 'Х')[0].toUpperCase(),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: kPrimaryColor,
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).pushNamed('/profile');
+          },
+          child: CircleAvatar(
+            backgroundColor: kPrimaryColor.withOpacity(0.1),
+            radius: 24,
+            child: Text(
+              (user?.displayName ?? 'Х')[0].toUpperCase(),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: kPrimaryColor,
+              ),
             ),
           ),
         ),

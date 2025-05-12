@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static final List<Widget> _pages = [
     const DashboardScreen(),
     const IncomeExpenseScreen(),
-    const BudgetScreen(),
+    // const BudgetScreen(),
     const ReportsScreen(),
     const TasksScreen(),
     const ProfileScreen(),
@@ -74,182 +74,82 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          'Санхүү Апп',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: kCardColor,
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: kPrimaryColor),
-            onPressed: _signOut,
-            tooltip: 'Гарах',
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: kCardColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                  offset: const Offset(0, -3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildBottomNavItem(
+                  icon: Icons.dashboard_rounded,
+                  title: 'Хянах самбар',
+                  isSelected: _selectedIndex == 0,
+                  onTap: () {
+                    _onItemTapped(0);
+                  },
+                ),
+                _buildBottomNavItem(
+                  icon: Icons.currency_exchange_rounded,
+                  title: 'Орлого & Зарлага',
+                  isSelected: _selectedIndex == 1,
+                  onTap: () {
+                    _onItemTapped(1);
+                  },
+                ),
+                // _buildBottomNavItem(
+                //   icon: Icons.account_balance_wallet_rounded,
+                //   title: 'Төсөв',
+                //   isSelected: _selectedIndex == 2,
+                //   onTap: () {
+                //     _onItemTapped(2);
+                //   },
+                // ),
+                _buildBottomNavItem(
+                  icon: Icons.bar_chart_rounded,
+                  title: 'Тайлан',
+                  isSelected: _selectedIndex == 2,
+                  onTap: () {
+                    _onItemTapped(2);
+                  },
+                ),
+                _buildBottomNavItem(
+                  icon: Icons.task_alt_rounded,
+                  title: 'Ажлууд',
+                  isSelected: _selectedIndex == 3,
+                  onTap: () {
+                    _onItemTapped(3);
+                  },
+                ),
+                _buildBottomNavItem(
+                  icon: Icons.person_rounded,
+                  title: 'Профайл',
+                  isSelected: _selectedIndex == 4,
+                  onTap: () {
+                    _onItemTapped(4);
+                  },
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-      drawer: Drawer(
-        backgroundColor: kCardColor,
-        elevation: 1,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(
-                user?.displayName ?? 'Хэрэглэгч',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              accountEmail: Text(
-                user?.email ?? '',
-                style: const TextStyle(
-                  fontSize: 14,
-                ),
-              ),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: kPrimaryColor,
-                child: Text(
-                  userInitial,
-                  style: const TextStyle(
-                    fontSize: 28.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              decoration: const BoxDecoration(
-                color: kPrimaryColor,
-              ),
-            ),
-            _buildDrawerItem(
-              icon: Icons.dashboard_rounded,
-              title: 'Хянах самбар',
-              isSelected: _selectedIndex == 0,
-              onTap: () {
-                _onItemTapped(0);
-                Navigator.pop(context);
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.currency_exchange_rounded,
-              title: 'Орлого & Зарлага',
-              isSelected: _selectedIndex == 1,
-              onTap: () {
-                _onItemTapped(1);
-                Navigator.pop(context);
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.account_balance_wallet_rounded,
-              title: 'Төсөв',
-              isSelected: _selectedIndex == 2,
-              onTap: () {
-                _onItemTapped(2);
-                Navigator.pop(context);
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.bar_chart_rounded,
-              title: 'Тайлан',
-              isSelected: _selectedIndex == 3,
-              onTap: () {
-                _onItemTapped(3);
-                Navigator.pop(context);
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.task_alt_rounded,
-              title: 'Ажлууд',
-              isSelected: _selectedIndex == 4,
-              onTap: () {
-                _onItemTapped(4);
-                Navigator.pop(context);
-              },
-            ),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
-            _buildDrawerItem(
-              icon: Icons.person_rounded,
-              title: 'Профайл',
-              isSelected: _selectedIndex == 5,
-              onTap: () {
-                _onItemTapped(5);
-                Navigator.pop(context);
-              },
-            ),
-            _buildDrawerItem(
-              icon: Icons.logout_rounded,
-              title: 'Гарах',
-              isSelected: false,
-              onTap: _signOut,
-              textColor: Colors.red.shade700,
-              iconColor: Colors.red.shade700,
-            ),
-          ],
-        ),
-      ),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: kCardColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: kCardColor,
-          elevation: 0,
-          selectedItemColor: kPrimaryColor,
-          unselectedItemColor: kTextLightColor,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 11,
-          ),
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_rounded),
-              label: 'Хянах самбар',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.currency_exchange_rounded),
-              label: 'Орлого/Зарлага',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.account_balance_wallet_rounded),
-              label: 'Төсөв',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart_rounded),
-              label: 'Тайлан',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.task_alt_rounded),
-              label: 'Ажлууд',
-            ),
-          ],
-          currentIndex: _selectedIndex < 5 ? _selectedIndex : 0,
-          onTap: _onItemTapped,
-        ),
       ),
     );
   }
 
-  Widget _buildDrawerItem({
+  Widget _buildBottomNavItem({
     required IconData icon,
     required String title,
     required bool isSelected,
@@ -257,27 +157,34 @@ class _HomeScreenState extends State<HomeScreen> {
     Color? textColor,
     Color? iconColor,
   }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: iconColor ?? (isSelected ? kPrimaryColor : kTextLightColor),
-        size: 22,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: textColor ?? (isSelected ? kPrimaryColor : kTextColor),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color:
+                    iconColor ?? (isSelected ? kPrimaryColor : kTextLightColor),
+                size: 24,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: TextStyle(
+                  color: textColor ?? (isSelected ? kPrimaryColor : kTextColor),
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 11,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
-      selected: isSelected,
-      selectedTileColor: isSelected ? kPrimaryColor.withOpacity(0.1) : null,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      dense: true,
     );
   }
 }

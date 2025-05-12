@@ -40,26 +40,61 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Орлого & Зарлага'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        title: const Text(
+          'Орлого & Зарлага',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
         automaticallyImplyLeading: false,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'ОРЛОГО'),
-            Tab(text: 'ЗАРЛАГА'),
+          onTap: (index) {
+            setState(() {
+              // Индексийг шинэчлэх
+            });
+          },
+          tabs: [
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.arrow_downward, size: 20),
+                  SizedBox(width: 8),
+                  Text('ОРЛОГО'),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.arrow_upward, size: 20),
+                  SizedBox(width: 8),
+                  Text('ЗАРЛАГА'),
+                ],
+              ),
+            ),
           ],
           labelColor: Colors.blue,
+          unselectedLabelColor: Colors.grey,
           indicatorColor: Colors.blue,
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.label,
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildIncomeTab(user.uid),
+          _buildIncomeTab(user.uid, user),
           _buildExpenseTab(user.uid),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           if (_tabController.index == 0) {
             _showAddIncomeDialog(context, user.uid);
@@ -68,12 +103,14 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
           }
         },
         backgroundColor: Colors.blue,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label:
+            Text(_tabController.index == 0 ? 'Орлого нэмэх' : 'Зарлага нэмэх'),
       ),
     );
   }
 
-  Widget _buildIncomeTab(String userId) {
+  Widget _buildIncomeTab(String userId, dynamic user) {
     return StreamBuilder<List<IncomeModel>>(
       stream: _transactionService.getUserIncomes(userId),
       builder: (context, snapshot) {
@@ -89,7 +126,36 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
         final incomes = snapshot.data ?? [];
 
         if (incomes.isEmpty) {
-          return const Center(child: Text('Орлогын мэдээлэл байхгүй байна'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.account_balance_wallet,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Одоогоор орлогын мэдээлэл байхгүй байна',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddIncomeDialog(context, user.uid),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Орлого нэмэх'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
@@ -99,23 +165,84 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
             final income = incomes[index];
             return Card(
               elevation: 2,
-              margin: const EdgeInsets.symmetric(vertical: 4.0),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.green.shade100,
-                  child: const Icon(Icons.arrow_downward, color: Colors.green),
-                ),
-                title: Text(income.title),
-                subtitle:
-                    Text('${income.category} - ${_formatDate(income.date)}'),
-                trailing: Text(
-                  '₮${income.amount.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
+              margin:
+                  const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: Colors.green, // Use Colors.red for expenses
+                      width: 4,
+                    ),
                   ),
                 ),
-                onTap: () => _showIncomeDetails(context, income),
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green
+                          .withOpacity(0.1), // Use Colors.red for expenses
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons
+                          .arrow_downward, // Use Icons.arrow_upward for expenses
+                      color: Colors.green, // Use Colors.red for expenses
+                    ),
+                  ),
+                  title: Text(
+                    income.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.category,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            income.category,
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatDate(income.date),
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  trailing: Text(
+                    '₮${income.amount.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: Colors.green, // Use Colors.red for expenses
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  onTap: () => _showIncomeDetails(context, income),
+                ),
               ),
             );
           },
@@ -150,23 +277,83 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
             final expense = expenses[index];
             return Card(
               elevation: 2,
-              margin: const EdgeInsets.symmetric(vertical: 4.0),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.red.shade100,
-                  child: const Icon(Icons.arrow_upward, color: Colors.red),
-                ),
-                title: Text(expense.title),
-                subtitle:
-                    Text('${expense.category} - ${_formatDate(expense.date)}'),
-                trailing: Text(
-                  '₮${expense.amount.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
+              margin:
+                  const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: Colors.red, // Use Colors.red for expenses
+                      width: 4,
+                    ),
                   ),
                 ),
-                onTap: () => _showExpenseDetails(context, expense),
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red
+                          .withOpacity(0.1), // Use Colors.red for expenses
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.arrow_upward, // Use Icons.arrow_upward for expenses
+                      color: Colors.red, // Use Colors.red for expenses
+                    ),
+                  ),
+                  title: Text(
+                    expense.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.category,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            expense.category,
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatDate(expense.date),
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  trailing: Text(
+                    '₮${expense.amount.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  onTap: () => _showExpenseDetails(context, expense),
+                ),
               ),
             );
           },

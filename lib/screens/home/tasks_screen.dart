@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/task_service.dart';
 import '../../models/task_model.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -42,6 +43,10 @@ class _TasksScreenState extends State<TasksScreen> {
       });
 
       final tasks = await _taskService.getUserTasks(user.uid);
+
+      // Цагаар эрэмблэх
+      tasks.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+
       setState(() {
         _tasks = tasks;
         _isLoading = false;
@@ -204,18 +209,229 @@ class _TasksScreenState extends State<TasksScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _loadTasks,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(8),
-                        itemCount: _tasks.length,
-                        itemBuilder: (context, index) {
-                          final task = _tasks[index];
-                          return _buildTaskCard(task);
-                        },
+                      child: Column(
+                        children: [
+                          _buildTasksChart(),
+                          Expanded(
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(8),
+                              itemCount: _tasks.length,
+                              itemBuilder: (context, index) {
+                                final task = _tasks[index];
+                                return _buildTaskCard(task);
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addTask,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildTasksChart() {
+    // Өнөөдрийн өдрийг тодорхойлох
+    final now = DateTime.now();
+
+    // Өнөөдөр биелэгдэх ёстой ажлын тоо
+    final todayTasks = _tasks
+        .where((task) =>
+            task.dueDate.year == now.year &&
+            task.dueDate.month == now.month &&
+            task.dueDate.day == now.day)
+        .length;
+
+    // Хоцорсон ажлын тоо (өнгөрсөн өдөр гүйцэтгээгүй)
+    final overdueTasks = _tasks
+        .where((task) => task.dueDate.isBefore(now) && !task.isCompleted)
+        .length;
+
+    // Ирэх 7 хоногт биелэгдэх ажлын тоо
+    final upcomingTasks = _tasks
+        .where((task) =>
+            task.dueDate.isAfter(now) &&
+            task.dueDate.difference(now).inDays <= 7)
+        .length;
+
+    // Гүйцэтгэсэн ажлын тоо
+    final completedTasks = _tasks.where((task) => task.isCompleted).length;
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ажлын статистик',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 200,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: _tasks.length.toDouble(),
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        String title;
+                        switch (groupIndex) {
+                          case 0:
+                            title = 'Өнөөдөр';
+                            break;
+                          case 1:
+                            title = 'Хоцорсон';
+                            break;
+                          case 2:
+                            title = '7 хоногт';
+                            break;
+                          case 3:
+                            title = 'Гүйцэтгэсэн';
+                            break;
+                          default:
+                            title = '';
+                        }
+                        return BarTooltipItem(
+                          '$title: ${rod.toY.toInt()}',
+                          const TextStyle(color: Colors.white),
+                        );
+                      },
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          String text;
+                          switch (value.toInt()) {
+                            case 0:
+                              text = 'Өнөөдөр';
+                              break;
+                            case 1:
+                              text = 'Хоцорсон';
+                              break;
+                            case 2:
+                              text = '7 хоногт';
+                              break;
+                            case 3:
+                              text = 'Гүйцэтгэсэн';
+                              break;
+                            default:
+                              text = '';
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              text,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        getTitlesWidget: (value, meta) {
+                          if (value % 1 != 0) return const Text('');
+                          return Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    topTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  barGroups: [
+                    BarChartGroupData(
+                      x: 0,
+                      barRods: [
+                        BarChartRodData(
+                          toY: todayTasks.toDouble(),
+                          color: Colors.blue,
+                          width: 22,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                    BarChartGroupData(
+                      x: 1,
+                      barRods: [
+                        BarChartRodData(
+                          toY: overdueTasks.toDouble(),
+                          color: Colors.red,
+                          width: 22,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                    BarChartGroupData(
+                      x: 2,
+                      barRods: [
+                        BarChartRodData(
+                          toY: upcomingTasks.toDouble(),
+                          color: Colors.orange,
+                          width: 22,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                    BarChartGroupData(
+                      x: 3,
+                      barRods: [
+                        BarChartRodData(
+                          toY: completedTasks.toDouble(),
+                          color: Colors.green,
+                          width: 22,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(6),
+                            topRight: Radius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

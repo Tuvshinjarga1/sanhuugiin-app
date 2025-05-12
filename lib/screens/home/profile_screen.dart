@@ -467,6 +467,24 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
         ),
+        const SizedBox(height: 32),
+        Center(
+          child: ElevatedButton.icon(
+            onPressed: _signOut,
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+            label: const Text('Гарах'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(50),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+              textStyle:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
       ],
     );
   }

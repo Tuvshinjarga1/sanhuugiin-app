@@ -48,6 +48,9 @@ class _ReportsScreenState extends State<ReportsScreen>
       return;
     }
 
+    // Console дээр лог хэвлэж шалгах
+    print('Tab changed to: ${_tabController.index}');
+
     switch (_tabController.index) {
       case 0:
         _loadMonthlyReport();
@@ -712,14 +715,22 @@ class _ReportsScreenState extends State<ReportsScreen>
     });
 
     try {
+      // Лог хэвлэх
+      print(
+          'Loading monthly report for user: ${user.uid}, month: $_selectedMonth');
+
       final report =
           await _reportService.getMonthlyReport(user.uid, _selectedMonth);
+
+      // Өгөгдлийг шалгах
+      print('Monthly report received: $report');
 
       setState(() {
         _monthlyReportData = report;
         _isLoading = false;
       });
     } catch (e) {
+      print('Error loading monthly report: $e');
       setState(() {
         _errorMessage = 'Тайлан авахад алдаа гарлаа: ${e.toString()}';
         _isLoading = false;
