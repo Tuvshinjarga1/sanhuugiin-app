@@ -8,6 +8,7 @@ import 'budget_screen.dart';
 import 'reports_screen.dart';
 import 'tasks_screen.dart';
 import 'profile_screen.dart';
+import 'chat_screen.dart';
 
 // Түгээмэл хэрэглэгдэх өнгөнүүд
 const Color kPrimaryColor = Color(0xFF1E88E5); // Үндсэн өнгө
@@ -36,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // const BudgetScreen(),
     const ReportsScreen(),
     const TasksScreen(),
+    const ChatScreen(),
     const ProfileScreen(),
   ];
 
@@ -134,11 +136,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 _buildBottomNavItem(
-                  icon: Icons.person_rounded,
-                  title: 'Профайл',
+                  icon: Icons.chat_rounded,
+                  title: 'Чат',
                   isSelected: _selectedIndex == 4,
                   onTap: () {
                     _onItemTapped(4);
+                  },
+                ),
+                _buildBottomNavItem(
+                  icon: Icons.person_rounded,
+                  title: 'Профайл',
+                  isSelected: _selectedIndex == 5,
+                  onTap: () {
+                    _onItemTapped(5);
                   },
                 ),
               ],
