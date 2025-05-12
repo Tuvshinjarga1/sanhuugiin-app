@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../services/transaction_service.dart';
+import '../../services/budget_service.dart';
 import '../../models/income_model.dart';
 import '../../models/expense_model.dart';
+import '../../models/budget_model.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../home/home_screen.dart'; // Import for the color constants
@@ -77,11 +79,13 @@ class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   final UserService _userService = UserService();
   final TransactionService _transactionService = TransactionService();
+  final BudgetService _budgetService = BudgetService();
   bool _isLoading = true;
   double _balance = 0.0;
   double _totalIncome = 0.0;
   double _totalExpense = 0.0;
   List<dynamic> _recentTransactions = [];
+  List<BudgetComparisonResult> _budgetComparisons = [];
   String? _errorMessage;
   late AnimationController _animationController;
   late Animation<double> _balanceAnimation;
@@ -123,8 +127,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         _errorMessage = null;
       });
 
-      // Хэрэглэгчийн мэдээлэл авах
-      final userData = await _userService.getUserById(user.uid);
+      // Нийт төсвийн үлдэгдлийг тооцоолох
+      final balance =
+          await _budgetService.calculateTotalBudgetBalance(user.uid);
 
       // Сүүлийн 5 орлого авах
       final incomes = await _transactionService.getRecentIncomes(user.uid, 5);
@@ -148,9 +153,18 @@ class _DashboardScreenState extends State<DashboardScreen>
         return bDate.compareTo(aDate);
       });
 
+      // Төсөв ба бодит зарцуулалтын харьцуулалт
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0);
+
+      final budgetComparisons = await _budgetService.compareBudgetWithActual(
+          user.uid, startOfMonth, endOfMonth);
+
       setState(() {
-        _balance = userData.balance ?? 0.0;
+        _balance = balance;
         _recentTransactions = allTransactions.take(5).toList();
+        _budgetComparisons = budgetComparisons;
         _isLoading = false;
       });
 
@@ -193,6 +207,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                           _buildBalanceCard(numberFormat),
                           const SizedBox(height: 24),
                           _buildSummaryCards(numberFormat),
+                          const SizedBox(height: 24),
+                          _buildBudgetComparisonSection(),
                           const SizedBox(height: 24),
                           _buildRecentTransactionsHeader(),
                           const SizedBox(height: 12),
@@ -617,5 +633,186 @@ class _DashboardScreenState extends State<DashboardScreen>
     } else {
       return 'Оройн мэнд,';
     }
+  }
+
+  Widget _buildBudgetComparisonSection() {
+    if (_budgetComparisons.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Төсөв харьцуулалт',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: kTextColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: kCardColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 48,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Төсөв тохируулаагүй байна',
+                  style: TextStyle(
+                    color: kTextLightColor,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // Navigate to budget screen
+                    Navigator.pushNamed(context, '/budget');
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Төсөв тохируулах'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Төсөв vs. Бодит зарцуулалт',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: kTextColor,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._budgetComparisons
+            .map((comparison) => _buildBudgetComparisonItem(comparison))
+            .toList(),
+      ],
+    );
+  }
+
+  Widget _buildBudgetComparisonItem(BudgetComparisonResult comparison) {
+    final bool isPositiveBalance = comparison.balance >= 0;
+
+    final statusColor = isPositiveBalance ? Colors.green : kExpenseColor;
+
+    final statusText = isPositiveBalance
+        ? 'Үлдэгдэл: ₮${comparison.balance.toStringAsFixed(0)}'
+        : 'Алдагдал: ₮${(-comparison.balance).toStringAsFixed(0)}';
+
+    final numberFormat = NumberFormat("#,##0.00", "mn_MN");
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: kCardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            title: Text(
+              comparison.category,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              children: [
+                // Прогресс хэсэг
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: comparison.usagePercentage / 100,
+                    backgroundColor: Colors.grey.shade200,
+                    color: comparison.usagePercentage > 100
+                        ? Colors.red
+                        : Colors.blue,
+                    minHeight: 10,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Орлого: ₮${numberFormat.format(comparison.incomeAmount)}',
+                      style: TextStyle(
+                        color: kIncomeColor,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      'Зарлага: ₮${numberFormat.format(comparison.expenseAmount)}',
+                      style: TextStyle(
+                        color: kExpenseColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

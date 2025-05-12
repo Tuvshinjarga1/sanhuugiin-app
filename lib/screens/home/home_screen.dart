@@ -33,8 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static final List<Widget> _pages = [
     const DashboardScreen(),
-    const IncomeExpenseScreen(),
-    // const BudgetScreen(),
+    // const IncomeExpenseScreen(),
+    const BudgetScreen(),
     const ReportsScreen(),
     const TasksScreen(),
     const ChatScreen(),
@@ -103,22 +103,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     _onItemTapped(0);
                   },
                 ),
+                // _buildBottomNavItem(
+                //   icon: Icons.currency_exchange_rounded,
+                //   title: 'Орлого & Зарлага',
+                //   isSelected: _selectedIndex == 1,
+                //   onTap: () {
+                //     _onItemTapped(1);
+                //   },
+                // ),
                 _buildBottomNavItem(
-                  icon: Icons.currency_exchange_rounded,
-                  title: 'Орлого & Зарлага',
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'Төсөв',
                   isSelected: _selectedIndex == 1,
                   onTap: () {
                     _onItemTapped(1);
                   },
                 ),
-                // _buildBottomNavItem(
-                //   icon: Icons.account_balance_wallet_rounded,
-                //   title: 'Төсөв',
-                //   isSelected: _selectedIndex == 2,
-                //   onTap: () {
-                //     _onItemTapped(2);
-                //   },
-                // ),
                 _buildBottomNavItem(
                   icon: Icons.bar_chart_rounded,
                   title: 'Тайлан',

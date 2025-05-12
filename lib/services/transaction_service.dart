@@ -388,4 +388,328 @@ class TransactionService {
       rethrow;
     }
   }
+
+  // Тодорхой хугацааны хооронд орлогын мэдээлэл авах
+  Future<List<IncomeModel>> getIncomesForPeriod(
+      String userId, DateTime startDate, DateTime endDate) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('incomes')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('getIncomesForPeriod: $userId, $startDate - $endDate');
+      print('startDate ms: ${startDate.millisecondsSinceEpoch}');
+      print('endDate ms: ${endDate.millisecondsSinceEpoch}');
+      print('Initial results: ${querySnapshot.docs.length}');
+
+      List<IncomeModel> allIncomes = querySnapshot.docs
+          .map((doc) => IncomeModel.fromFirestore(doc))
+          .toList();
+
+      // Хугацааны дагуу шүүх
+      List<IncomeModel> filteredIncomes = allIncomes.where((income) {
+        return (income.date.isAfter(startDate) ||
+                income.date.isAtSameMomentAs(startDate)) &&
+            (income.date.isBefore(endDate) ||
+                income.date.isAtSameMomentAs(endDate));
+      }).toList();
+
+      print('Filtered results: ${filteredIncomes.length}');
+      return filteredIncomes;
+    } catch (e) {
+      print('getIncomesForPeriod error: $e');
+      rethrow;
+    }
+  }
+
+  // Тодорхой хугацааны хооронд зарлагын мэдээлэл авах
+  Future<List<ExpenseModel>> getExpensesForPeriod(
+      String userId, DateTime startDate, DateTime endDate) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('expenses')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('getExpensesForPeriod: $userId, $startDate - $endDate');
+      print('startDate ms: ${startDate.millisecondsSinceEpoch}');
+      print('endDate ms: ${endDate.millisecondsSinceEpoch}');
+      print('Initial results: ${querySnapshot.docs.length}');
+
+      List<ExpenseModel> allExpenses = querySnapshot.docs
+          .map((doc) => ExpenseModel.fromFirestore(doc))
+          .toList();
+
+      // Хугацааны дагуу шүүх
+      List<ExpenseModel> filteredExpenses = allExpenses.where((expense) {
+        return (expense.date.isAfter(startDate) ||
+                expense.date.isAtSameMomentAs(startDate)) &&
+            (expense.date.isBefore(endDate) ||
+                expense.date.isAtSameMomentAs(endDate));
+      }).toList();
+
+      print('Filtered results: ${filteredExpenses.length}');
+      return filteredExpenses;
+    } catch (e) {
+      print('getExpensesForPeriod error: $e');
+      rethrow;
+    }
+  }
+
+  // Төсөвтэй холбоотой орлогын нийт дүнг тооцоолох
+  Future<double> calculateBudgetIncomeUsage(String budgetId) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('incomes')
+          .where('budgetId', isEqualTo: budgetId)
+          .get();
+
+      double totalAmount = 0;
+      for (var doc in querySnapshot.docs) {
+        IncomeModel income = IncomeModel.fromFirestore(doc);
+        totalAmount += income.amount;
+      }
+      return totalAmount;
+    } catch (e) {
+      print('calculateBudgetIncomeUsage error: $e');
+      return 0;
+    }
+  }
+
+  // Төсөвтэй холбоотой зарлагын нийт дүнг тооцоолох
+  Future<double> calculateBudgetExpenseUsage(String budgetId) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('expenses')
+          .where('budgetId', isEqualTo: budgetId)
+          .get();
+
+      double totalAmount = 0;
+      for (var doc in querySnapshot.docs) {
+        ExpenseModel expense = ExpenseModel.fromFirestore(doc);
+        totalAmount += expense.amount;
+      }
+      return totalAmount;
+    } catch (e) {
+      print('calculateBudgetExpenseUsage error: $e');
+      return 0;
+    }
+  }
+
+  // Төсөвтэй холбоотой орлогуудыг авах
+  Stream<List<IncomeModel>> getBudgetIncomes(String userId, String budgetId) {
+    return _firestore
+        .collection('incomes')
+        .where('userId', isEqualTo: userId)
+        .where('budgetId', isEqualTo: budgetId)
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => IncomeModel.fromFirestore(doc))
+          .toList();
+    });
+  }
+
+  // Төсөвтэй холбоотой зарлагуудыг авах
+  Stream<List<ExpenseModel>> getBudgetExpenses(String userId, String budgetId) {
+    return _firestore
+        .collection('expenses')
+        .where('userId', isEqualTo: userId)
+        .where('budgetId', isEqualTo: budgetId)
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => ExpenseModel.fromFirestore(doc))
+          .toList();
+    });
+  }
+
+  // Орлогыг төсөвтэй холбож нэмэх
+  Future<void> addIncomeWithBudget(IncomeModel income) async {
+    await _firestore.collection('incomes').add(income.toMap());
+  }
+
+  // Зарлагыг төсөвтэй холбож нэмэх
+  Future<void> addExpenseWithBudget(ExpenseModel expense) async {
+    await _firestore.collection('expenses').add(expense.toMap());
+  }
+
+  // Тухайн ангилал, хэрэглэгчид тохирох орлогын төсвүүдийг авах
+  Future<List<Map<String, dynamic>>> getAvailableIncomeBudgets(
+      String userId, String category, DateTime date) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('budgets')
+          .where('userId', isEqualTo: userId)
+          .where('category', isEqualTo: category)
+          .where('isIncome', isEqualTo: true)
+          .get();
+
+      List<Map<String, dynamic>> availableBudgets = [];
+
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data();
+        DateTime startDate;
+        DateTime endDate;
+
+        if (data['startDate'] is Timestamp) {
+          startDate = (data['startDate'] as Timestamp).toDate();
+        } else {
+          startDate = DateTime.fromMillisecondsSinceEpoch(data['startDate']);
+        }
+
+        if (data['endDate'] is Timestamp) {
+          endDate = (data['endDate'] as Timestamp).toDate();
+        } else {
+          endDate = DateTime.fromMillisecondsSinceEpoch(data['endDate']);
+        }
+
+        if ((date.isAfter(startDate) || date.isAtSameMomentAs(startDate)) &&
+            (date.isBefore(endDate) || date.isAtSameMomentAs(endDate))) {
+          // Төсвийн одоогийн ашиглалтыг тооцоолох
+          double usedAmount = await calculateBudgetIncomeUsage(doc.id);
+          double budgetAmount = (data['amount'] as num).toDouble();
+
+          availableBudgets.add({
+            'id': doc.id,
+            'title': data['title'],
+            'amount': budgetAmount,
+            'usedAmount': usedAmount,
+            'remainingAmount': budgetAmount - usedAmount,
+            'startDate': startDate,
+            'endDate': endDate,
+          });
+        }
+      }
+
+      return availableBudgets;
+    } catch (e) {
+      print('getAvailableIncomeBudgets error: $e');
+      rethrow;
+    }
+  }
+
+  // Тухайн ангилал, хэрэглэгчид тохирох зарлагын төсвүүдийг авах
+  Future<List<Map<String, dynamic>>> getAvailableExpenseBudgets(
+      String userId, String category, DateTime date) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('budgets')
+          .where('userId', isEqualTo: userId)
+          .where('category', isEqualTo: category)
+          .where('isIncome', isEqualTo: false)
+          .get();
+
+      List<Map<String, dynamic>> availableBudgets = [];
+
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data();
+        DateTime startDate;
+        DateTime endDate;
+
+        if (data['startDate'] is Timestamp) {
+          startDate = (data['startDate'] as Timestamp).toDate();
+        } else {
+          startDate = DateTime.fromMillisecondsSinceEpoch(data['startDate']);
+        }
+
+        if (data['endDate'] is Timestamp) {
+          endDate = (data['endDate'] as Timestamp).toDate();
+        } else {
+          endDate = DateTime.fromMillisecondsSinceEpoch(data['endDate']);
+        }
+
+        if ((date.isAfter(startDate) || date.isAtSameMomentAs(startDate)) &&
+            (date.isBefore(endDate) || date.isAtSameMomentAs(endDate))) {
+          // Төсвийн одоогийн ашиглалтыг тооцоолох
+          double usedAmount = await calculateBudgetExpenseUsage(doc.id);
+          double budgetAmount = (data['amount'] as num).toDouble();
+
+          availableBudgets.add({
+            'id': doc.id,
+            'title': data['title'],
+            'amount': budgetAmount,
+            'usedAmount': usedAmount,
+            'remainingAmount': budgetAmount - usedAmount,
+            'startDate': startDate,
+            'endDate': endDate,
+          });
+        }
+      }
+
+      return availableBudgets;
+    } catch (e) {
+      print('getAvailableExpenseBudgets error: $e');
+      rethrow;
+    }
+  }
+
+  // Тодорхой хугацааны хооронд, тодорхой төсөвтэй холбоотой орлогын мэдээлэл авах
+  Future<List<IncomeModel>> getBudgetIncomesForPeriod(String userId,
+      String budgetId, DateTime startDate, DateTime endDate) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('incomes')
+          .where('userId', isEqualTo: userId)
+          .where('budgetId', isEqualTo: budgetId)
+          .get();
+
+      print(
+          'getBudgetIncomesForPeriod: $userId, $budgetId, $startDate - $endDate');
+
+      List<IncomeModel> allIncomes = querySnapshot.docs
+          .map((doc) => IncomeModel.fromFirestore(doc))
+          .toList();
+
+      // Хугацааны дагуу шүүх
+      List<IncomeModel> filteredIncomes = allIncomes.where((income) {
+        return (income.date.isAfter(startDate) ||
+                income.date.isAtSameMomentAs(startDate)) &&
+            (income.date.isBefore(endDate) ||
+                income.date.isAtSameMomentAs(endDate));
+      }).toList();
+
+      print('Filtered budget incomes: ${filteredIncomes.length}');
+      return filteredIncomes;
+    } catch (e) {
+      print('getBudgetIncomesForPeriod error: $e');
+      rethrow;
+    }
+  }
+
+  // Тодорхой хугацааны хооронд, тодорхой төсөвтэй холбоотой зарлагын мэдээлэл авах
+  Future<List<ExpenseModel>> getBudgetExpensesForPeriod(String userId,
+      String budgetId, DateTime startDate, DateTime endDate) async {
+    try {
+      QuerySnapshot querySnapshot = await _firestore
+          .collection('expenses')
+          .where('userId', isEqualTo: userId)
+          .where('budgetId', isEqualTo: budgetId)
+          .get();
+
+      print(
+          'getBudgetExpensesForPeriod: $userId, $budgetId, $startDate - $endDate');
+
+      List<ExpenseModel> allExpenses = querySnapshot.docs
+          .map((doc) => ExpenseModel.fromFirestore(doc))
+          .toList();
+
+      // Хугацааны дагуу шүүх
+      List<ExpenseModel> filteredExpenses = allExpenses.where((expense) {
+        return (expense.date.isAfter(startDate) ||
+                expense.date.isAtSameMomentAs(startDate)) &&
+            (expense.date.isBefore(endDate) ||
+                expense.date.isAtSameMomentAs(endDate));
+      }).toList();
+
+      print('Filtered budget expenses: ${filteredExpenses.length}');
+      return filteredExpenses;
+    } catch (e) {
+      print('getBudgetExpensesForPeriod error: $e');
+      rethrow;
+    }
+  }
 }

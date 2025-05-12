@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ExpenseModel {
   final String id;
   final String userId;
@@ -6,6 +8,7 @@ class ExpenseModel {
   final double amount;
   final DateTime date;
   final String note;
+  final String? budgetId;
 
   ExpenseModel({
     required this.id,
@@ -15,6 +18,7 @@ class ExpenseModel {
     required this.amount,
     required this.date,
     this.note = '',
+    this.budgetId,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +30,7 @@ class ExpenseModel {
       'amount': amount,
       'date': date.millisecondsSinceEpoch,
       'note': note,
+      'budgetId': budgetId,
     };
   }
 
@@ -38,6 +43,23 @@ class ExpenseModel {
       amount: map['amount']?.toDouble() ?? 0.0,
       date: DateTime.fromMillisecondsSinceEpoch(map['date']),
       note: map['note'] ?? '',
+      budgetId: map['budgetId'],
+    );
+  }
+
+  factory ExpenseModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return ExpenseModel(
+      id: doc.id,
+      userId: data['userId'] ?? '',
+      title: data['title'] ?? '',
+      category: data['category'] ?? '',
+      amount: (data['amount'] ?? 0).toDouble(),
+      date: data['date'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(data['date'])
+          : (data['date'] as Timestamp).toDate(),
+      note: data['note'] ?? '',
+      budgetId: data['budgetId'],
     );
   }
 }

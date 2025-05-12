@@ -5,6 +5,30 @@ import '../../services/transaction_service.dart';
 import '../../models/income_model.dart';
 import '../../models/expense_model.dart';
 
+// Орлогын ангилалууд
+const List<String> incomeCategories = [
+  'Цалин',
+  'Бизнесийн орлого',
+  'Тэтгэвэр, тэтгэмж',
+  'Шагнал, урамшуулал',
+  'Зээл',
+  'Бусад орлого',
+];
+
+// Зарлагын ангилалууд
+const List<String> expenseCategories = [
+  'Хүнс',
+  'Гэр ахуй',
+  'Хувцас',
+  'Гоо сайхан',
+  'Боловсрол',
+  'Эрүүл мэнд',
+  'Зээл төлөлт',
+  'Унаа, тээвэр',
+  'Утас, интернэт',
+  'Бусад зарлага',
+];
+
 class IncomeExpenseScreen extends StatefulWidget {
   const IncomeExpenseScreen({super.key});
 
@@ -489,249 +513,590 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
   void _showAddIncomeDialog(BuildContext context, String userId) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
-    final categoryController = TextEditingController(text: 'Цалин');
     final noteController = TextEditingController();
     DateTime selectedDate = DateTime.now();
+    String selectedCategory = incomeCategories[0];
+    String? selectedBudgetId;
+    List<Map<String, dynamic>> availableBudgets = [];
+    bool isLoadingBudgets = false;
+
+    // Төсөв сонгох функц
+    Future<void> _loadAvailableBudgets() async {
+      setState(() {
+        isLoadingBudgets = true;
+      });
+
+      try {
+        // Тухайн ангилалд тохирох төсвүүдийг авах
+        availableBudgets = await _transactionService.getAvailableIncomeBudgets(
+            userId, selectedCategory, selectedDate);
+
+        setState(() {
+          isLoadingBudgets = false;
+        });
+      } catch (e) {
+        setState(() {
+          isLoadingBudgets = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Төсвийн мэдээлэл авахад алдаа гарлаа: $e')),
+        );
+      }
+    }
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Орлого нэмэх'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Гарчиг',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: amountController,
-                  decoration: const InputDecoration(
-                    labelText: 'Дүн',
-                    border: OutlineInputBorder(),
-                    prefixText: '₮',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: categoryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ангилал',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      selectedDate = picked;
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Огноо',
-                      border: OutlineInputBorder(),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Орлого нэмэх'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Гарчиг',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                    child: Text(_formatDate(selectedDate)),
-                  ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: amountController,
+                      decoration: const InputDecoration(
+                        labelText: 'Дүн',
+                        border: OutlineInputBorder(),
+                        prefixText: '₮',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Ангилал',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: incomeCategories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            selectedCategory = newValue;
+                            selectedBudgetId = null; // Төсвийг дахин сонгуулах
+                          });
+                          // Ангилал өөрчлөгдөхөд төсвүүдийг дахин ачаалах
+                          _loadAvailableBudgets();
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            selectedDate = picked;
+                            selectedBudgetId = null; // Төсвийг дахин сонгуулах
+                          });
+                          // Огноо өөрчлөгдөхөд төсвүүдийг дахин ачаалах
+                          _loadAvailableBudgets();
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Огноо',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Text(_formatDate(selectedDate)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Төсөв сонгох хэсэг
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Төсөв сонгох: ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (isLoadingBudgets)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: () {
+                                _loadAvailableBudgets();
+                              },
+                              child: const Text('Төсвүүдийг шинэчлэх'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (availableBudgets.isEmpty && !isLoadingBudgets)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info_outline, color: Colors.amber),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Энэ ангилалд тохирох төсөв олдсонгүй. Та шинээр төсөв үүсгэх боломжтой.',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (availableBudgets.isNotEmpty)
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            constraints: const BoxConstraints(
+                              maxHeight: 200,
+                            ),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: availableBudgets.length,
+                              itemBuilder: (context, index) {
+                                final budget = availableBudgets[index];
+                                return RadioListTile<String>(
+                                  title: Text(budget['title']),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Төсөв: ₮${budget['amount'].toStringAsFixed(0)} | Ашигласан: ₮${budget['usedAmount'].toStringAsFixed(0)}',
+                                      ),
+                                      Text(
+                                        'Үлдэгдэл: ₮${budget['remainingAmount'].toStringAsFixed(0)}',
+                                        style: TextStyle(
+                                          color: budget['remainingAmount'] > 0
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  value: budget['id'],
+                                  groupValue: selectedBudgetId,
+                                  onChanged: (String? value) {
+                                    setState(() {
+                                      selectedBudgetId = value;
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Тэмдэглэл',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: noteController,
-                  decoration: const InputDecoration(
-                    labelText: 'Тэмдэглэл',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('БОЛИХ'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (titleController.text.isEmpty ||
+                        amountController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Бүх талбарыг бөглөнө үү')),
+                      );
+                      return;
+                    }
+
+                    final income = IncomeModel(
+                      id: '',
+                      userId: userId,
+                      title: titleController.text,
+                      category: selectedCategory,
+                      amount: double.tryParse(amountController.text) ?? 0,
+                      date: selectedDate,
+                      note: noteController.text,
+                      budgetId: selectedBudgetId, // Сонгосон төсвийг ашиглах
+                    );
+
+                    // Төсөвтэй эсвэл төсөвгүй орлого нэмэх
+                    Future<void> addFuture;
+                    if (selectedBudgetId != null) {
+                      addFuture =
+                          _transactionService.addIncomeWithBudget(income);
+                    } else {
+                      addFuture = _transactionService.addIncome(income);
+                    }
+
+                    addFuture.then((_) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Орлого амжилттай нэмэгдлээ')),
+                      );
+                    }).catchError((error) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Алдаа гарлаа: $error')),
+                      );
+                    });
+                  },
+                  child: const Text('НЭМЭХ'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('БОЛИХ'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (titleController.text.isEmpty ||
-                    amountController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Бүх талбарыг бөглөнө үү')),
-                  );
-                  return;
-                }
-
-                final income = IncomeModel(
-                  id: '',
-                  userId: userId,
-                  title: titleController.text,
-                  category: categoryController.text,
-                  amount: double.tryParse(amountController.text) ?? 0,
-                  date: selectedDate,
-                  note: noteController.text,
-                );
-
-                _transactionService.addIncome(income).then((value) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Орлого амжилттай нэмэгдлээ')),
-                  );
-                }).catchError((error) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Алдаа гарлаа: $error')),
-                  );
-                });
-              },
-              child: const Text('НЭМЭХ'),
-            ),
-          ],
+            );
+          },
         );
       },
-    );
+    ).then((_) {
+      // Диалогийг хаах үед контроллеруудыг цэвэрлэх
+      titleController.dispose();
+      amountController.dispose();
+      noteController.dispose();
+    });
   }
 
   void _showAddExpenseDialog(BuildContext context, String userId) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
-    final categoryController = TextEditingController(text: 'Хүнс');
     final noteController = TextEditingController();
     DateTime selectedDate = DateTime.now();
+    String selectedCategory = expenseCategories[0];
+    String? selectedBudgetId;
+    List<Map<String, dynamic>> availableBudgets = [];
+    bool isLoadingBudgets = false;
+
+    // Төсөв сонгох функц
+    Future<void> _loadAvailableBudgets() async {
+      setState(() {
+        isLoadingBudgets = true;
+      });
+
+      try {
+        // Тухайн ангилалд тохирох төсвүүдийг авах
+        availableBudgets = await _transactionService.getAvailableExpenseBudgets(
+            userId, selectedCategory, selectedDate);
+
+        setState(() {
+          isLoadingBudgets = false;
+        });
+      } catch (e) {
+        setState(() {
+          isLoadingBudgets = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Төсвийн мэдээлэл авахад алдаа гарлаа: $e')),
+        );
+      }
+    }
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Зарлага нэмэх'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Гарчиг',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: amountController,
-                  decoration: const InputDecoration(
-                    labelText: 'Дүн',
-                    border: OutlineInputBorder(),
-                    prefixText: '₮',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: categoryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ангилал',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      selectedDate = picked;
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Огноо',
-                      border: OutlineInputBorder(),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Зарлага нэмэх'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Гарчиг',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                    child: Text(_formatDate(selectedDate)),
-                  ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: amountController,
+                      decoration: const InputDecoration(
+                        labelText: 'Дүн',
+                        border: OutlineInputBorder(),
+                        prefixText: '₮',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Ангилал',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: expenseCategories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            selectedCategory = newValue;
+                            selectedBudgetId = null; // Төсвийг дахин сонгуулах
+                          });
+                          // Ангилал өөрчлөгдөхөд төсвүүдийг дахин ачаалах
+                          _loadAvailableBudgets();
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            selectedDate = picked;
+                            selectedBudgetId = null; // Төсвийг дахин сонгуулах
+                          });
+                          // Огноо өөрчлөгдөхөд төсвүүдийг дахин ачаалах
+                          _loadAvailableBudgets();
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Огноо',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Text(_formatDate(selectedDate)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Төсөв сонгох хэсэг
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Төсөв сонгох: ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (isLoadingBudgets)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: () {
+                                _loadAvailableBudgets();
+                              },
+                              child: const Text('Төсвүүдийг шинэчлэх'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (availableBudgets.isEmpty && !isLoadingBudgets)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info_outline, color: Colors.amber),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Энэ ангилалд тохирох төсөв олдсонгүй. Та шинээр төсөв үүсгэх боломжтой.',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (availableBudgets.isNotEmpty)
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            constraints: const BoxConstraints(
+                              maxHeight: 200,
+                            ),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: availableBudgets.length,
+                              itemBuilder: (context, index) {
+                                final budget = availableBudgets[index];
+                                return RadioListTile<String>(
+                                  title: Text(budget['title']),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Төсөв: ₮${budget['amount'].toStringAsFixed(0)} | Ашигласан: ₮${budget['usedAmount'].toStringAsFixed(0)}',
+                                      ),
+                                      Text(
+                                        'Үлдэгдэл: ₮${budget['remainingAmount'].toStringAsFixed(0)}',
+                                        style: TextStyle(
+                                          color: budget['remainingAmount'] > 0
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  value: budget['id'],
+                                  groupValue: selectedBudgetId,
+                                  onChanged: (String? value) {
+                                    setState(() {
+                                      selectedBudgetId = value;
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Тэмдэглэл',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: noteController,
-                  decoration: const InputDecoration(
-                    labelText: 'Тэмдэглэл',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('БОЛИХ'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (titleController.text.isEmpty ||
+                        amountController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Бүх талбарыг бөглөнө үү')),
+                      );
+                      return;
+                    }
+
+                    final expense = ExpenseModel(
+                      id: '',
+                      userId: userId,
+                      title: titleController.text,
+                      category: selectedCategory,
+                      amount: double.tryParse(amountController.text) ?? 0,
+                      date: selectedDate,
+                      note: noteController.text,
+                      budgetId: selectedBudgetId, // Сонгосон төсвийг ашиглах
+                    );
+
+                    // Төсөвтэй эсвэл төсөвгүй зарлага нэмэх
+                    Future<void> addFuture;
+                    if (selectedBudgetId != null) {
+                      addFuture =
+                          _transactionService.addExpenseWithBudget(expense);
+                    } else {
+                      addFuture = _transactionService.addExpense(expense);
+                    }
+
+                    addFuture.then((_) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Зарлага амжилттай нэмэгдлээ')),
+                      );
+                    }).catchError((error) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Алдаа гарлаа: $error')),
+                      );
+                    });
+                  },
+                  child: const Text('НЭМЭХ'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('БОЛИХ'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (titleController.text.isEmpty ||
-                    amountController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Бүх талбарыг бөглөнө үү')),
-                  );
-                  return;
-                }
-
-                final expense = ExpenseModel(
-                  id: '',
-                  userId: userId,
-                  title: titleController.text,
-                  category: categoryController.text,
-                  amount: double.tryParse(amountController.text) ?? 0,
-                  date: selectedDate,
-                  note: noteController.text,
-                );
-
-                _transactionService.addExpense(expense).then((value) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Зарлага амжилттай нэмэгдлээ')),
-                  );
-                }).catchError((error) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Алдаа гарлаа: $error')),
-                  );
-                });
-              },
-              child: const Text('НЭМЭХ'),
-            ),
-          ],
+            );
+          },
         );
       },
-    );
+    ).then((_) {
+      // Диалогийг хаах үед контроллеруудыг цэвэрлэх
+      titleController.dispose();
+      amountController.dispose();
+      noteController.dispose();
+    });
   }
 
   void _showEditIncomeDialog(BuildContext context, IncomeModel income) {
     final titleController = TextEditingController(text: income.title);
     final amountController =
         TextEditingController(text: income.amount.toString());
-    final categoryController = TextEditingController(text: income.category);
     final noteController = TextEditingController(text: income.note);
     DateTime selectedDate = income.date;
+    String selectedCategory = income.category;
+    // Хэрэв одоогийн ангилал жагсаалтад байхгүй бол эхний ангилалыг сонгоно
+    if (!incomeCategories.contains(selectedCategory)) {
+      selectedCategory = incomeCategories[0];
+    }
 
     showDialog(
       context: context,
@@ -760,12 +1125,23 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: categoryController,
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
                   decoration: const InputDecoration(
                     labelText: 'Ангилал',
                     border: OutlineInputBorder(),
                   ),
+                  items: incomeCategories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      selectedCategory = newValue;
+                    }
+                  },
                 ),
                 const SizedBox(height: 8),
                 InkWell(
@@ -819,7 +1195,7 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
                   id: income.id,
                   userId: income.userId,
                   title: titleController.text,
-                  category: categoryController.text,
+                  category: selectedCategory,
                   amount: double.tryParse(amountController.text) ?? 0,
                   date: selectedDate,
                   note: noteController.text,
@@ -851,9 +1227,13 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
     final titleController = TextEditingController(text: expense.title);
     final amountController =
         TextEditingController(text: expense.amount.toString());
-    final categoryController = TextEditingController(text: expense.category);
     final noteController = TextEditingController(text: expense.note);
     DateTime selectedDate = expense.date;
+    String selectedCategory = expense.category;
+    // Хэрэв одоогийн ангилал жагсаалтад байхгүй бол эхний ангилалыг сонгоно
+    if (!expenseCategories.contains(selectedCategory)) {
+      selectedCategory = expenseCategories[0];
+    }
 
     showDialog(
       context: context,
@@ -882,12 +1262,23 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: categoryController,
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
                   decoration: const InputDecoration(
                     labelText: 'Ангилал',
                     border: OutlineInputBorder(),
                   ),
+                  items: expenseCategories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      selectedCategory = newValue;
+                    }
+                  },
                 ),
                 const SizedBox(height: 8),
                 InkWell(
@@ -941,7 +1332,7 @@ class _IncomeExpenseScreenState extends State<IncomeExpenseScreen>
                   id: expense.id,
                   userId: expense.userId,
                   title: titleController.text,
-                  category: categoryController.text,
+                  category: selectedCategory,
                   amount: double.tryParse(amountController.text) ?? 0,
                   date: selectedDate,
                   note: noteController.text,
