@@ -213,7 +213,7 @@ class TransactionService {
     }
   }
 
-// Сүүлийн зарлагуудыг авах
+  // Сүүлийн зарлагуудыг авах
   Future<List<ExpenseModel>> getRecentExpenses(String userId, int limit) async {
     try {
       final querySnapshot = await _firestore
@@ -227,6 +227,164 @@ class TransactionService {
           .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Тодорхой сарын орлогуудыг авах
+  Future<List<IncomeModel>> getMonthIncomes(
+      String userId, int year, int month) async {
+    try {
+      // Тухайн сарын эхлэл, төгсгөлийн огноог тооцоолох
+      final startOfMonth = DateTime(year, month, 1);
+      final endOfMonth = DateTime(year, month + 1, 0, 23, 59, 59);
+
+      print('getMonthIncomes: $userId, $startOfMonth - $endOfMonth');
+      print('startOfMonth ms: ${startOfMonth.millisecondsSinceEpoch}');
+      print('endOfMonth ms: ${endOfMonth.millisecondsSinceEpoch}');
+
+      // Firestore-д композит индекс байхыг шаарддаг тул date,userId-р хайх боломжгүй
+      // Тиймээс userId-р хайгаад дараа нь хугацаагаар шүүнэ
+      final querySnapshot = await _firestore
+          .collection('incomes')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('getMonthIncomes raw results: ${querySnapshot.docs.length}');
+
+      // Хугацаагаар шүүх - date нь millisecondsSinceEpoch хэлбэрээр хадгалагдсан
+      final filteredDocs = querySnapshot.docs.where((doc) {
+        final data = doc.data();
+        final int dateMs = data['date'] as int;
+        return dateMs >= startOfMonth.millisecondsSinceEpoch &&
+            dateMs <= endOfMonth.millisecondsSinceEpoch;
+      }).toList();
+
+      print('getMonthIncomes filtered results: ${filteredDocs.length}');
+
+      return filteredDocs
+          .map((doc) => IncomeModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      print('getMonthIncomes error: $e');
+      rethrow;
+    }
+  }
+
+  // Тодорхой сарын зарлагуудыг авах
+  Future<List<ExpenseModel>> getMonthExpenses(
+      String userId, int year, int month) async {
+    try {
+      // Тухайн сарын эхлэл, төгсгөлийн огноог тооцоолох
+      final startOfMonth = DateTime(year, month, 1);
+      final endOfMonth = DateTime(year, month + 1, 0, 23, 59, 59);
+
+      print('getMonthExpenses: $userId, $startOfMonth - $endOfMonth');
+      print('startOfMonth ms: ${startOfMonth.millisecondsSinceEpoch}');
+      print('endOfMonth ms: ${endOfMonth.millisecondsSinceEpoch}');
+
+      // Firestore-д композит индекс байхыг шаарддаг тул date,userId-р хайх боломжгүй
+      // Тиймээс userId-р хайгаад дараа нь хугацаагаар шүүнэ
+      final querySnapshot = await _firestore
+          .collection('expenses')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('getMonthExpenses raw results: ${querySnapshot.docs.length}');
+
+      // Хугацаагаар шүүх - date нь millisecondsSinceEpoch хэлбэрээр хадгалагдсан
+      final filteredDocs = querySnapshot.docs.where((doc) {
+        final data = doc.data();
+        final int dateMs = data['date'] as int;
+        return dateMs >= startOfMonth.millisecondsSinceEpoch &&
+            dateMs <= endOfMonth.millisecondsSinceEpoch;
+      }).toList();
+
+      print('getMonthExpenses filtered results: ${filteredDocs.length}');
+
+      return filteredDocs
+          .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      print('getMonthExpenses error: $e');
+      rethrow;
+    }
+  }
+
+  // Тодорхой жилийн орлогуудыг авах
+  Future<List<IncomeModel>> getYearIncomes(String userId, int year) async {
+    try {
+      // Тухайн жилийн эхлэл, төгсгөлийн огноог тооцоолох
+      final startOfYear = DateTime(year, 1, 1);
+      final endOfYear = DateTime(year, 12, 31, 23, 59, 59);
+
+      print('getYearIncomes: $userId, $startOfYear - $endOfYear');
+      print('startOfYear ms: ${startOfYear.millisecondsSinceEpoch}');
+      print('endOfYear ms: ${endOfYear.millisecondsSinceEpoch}');
+
+      // Firestore-д композит индекс байхыг шаарддаг тул date,userId-р хайх боломжгүй
+      // Тиймээс userId-р хайгаад дараа нь хугацаагаар шүүнэ
+      final querySnapshot = await _firestore
+          .collection('incomes')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('getYearIncomes raw results: ${querySnapshot.docs.length}');
+
+      // Хугацаагаар шүүх - date нь millisecondsSinceEpoch хэлбэрээр хадгалагдсан
+      final filteredDocs = querySnapshot.docs.where((doc) {
+        final data = doc.data();
+        final int dateMs = data['date'] as int;
+        return dateMs >= startOfYear.millisecondsSinceEpoch &&
+            dateMs <= endOfYear.millisecondsSinceEpoch;
+      }).toList();
+
+      print('getYearIncomes filtered results: ${filteredDocs.length}');
+
+      return filteredDocs
+          .map((doc) => IncomeModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      print('getYearIncomes error: $e');
+      rethrow;
+    }
+  }
+
+  // Тодорхой жилийн зарлагуудыг авах
+  Future<List<ExpenseModel>> getYearExpenses(String userId, int year) async {
+    try {
+      // Тухайн жилийн эхлэл, төгсгөлийн огноог тооцоолох
+      final startOfYear = DateTime(year, 1, 1);
+      final endOfYear = DateTime(year, 12, 31, 23, 59, 59);
+
+      print('getYearExpenses: $userId, $startOfYear - $endOfYear');
+      print('startOfYear ms: ${startOfYear.millisecondsSinceEpoch}');
+      print('endOfYear ms: ${endOfYear.millisecondsSinceEpoch}');
+
+      // Firestore-д композит индекс байхыг шаарддаг тул date,userId-р хайх боломжгүй
+      // Тиймээс userId-р хайгаад дараа нь хугацаагаар шүүнэ
+      final querySnapshot = await _firestore
+          .collection('expenses')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('getYearExpenses raw results: ${querySnapshot.docs.length}');
+
+      // Хугацаагаар шүүх - date нь millisecondsSinceEpoch хэлбэрээр хадгалагдсан
+      final filteredDocs = querySnapshot.docs.where((doc) {
+        final data = doc.data();
+        final int dateMs = data['date'] as int;
+        return dateMs >= startOfYear.millisecondsSinceEpoch &&
+            dateMs <= endOfYear.millisecondsSinceEpoch;
+      }).toList();
+
+      print('getYearExpenses filtered results: ${filteredDocs.length}');
+
+      return filteredDocs
+          .map((doc) => ExpenseModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      print('getYearExpenses error: $e');
       rethrow;
     }
   }
